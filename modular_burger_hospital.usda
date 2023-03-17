@@ -8,7 +8,7 @@
             }
             dictionary Perspective = {
                 double3 position = (-1.2687694575540627, 3.0725793983759826, 1.3469660971686968)
-                double3 target = (-0.032000046417464345, 3.951640907828846e-7, 0.09543919504412979)
+                double3 target = (-0.032000046417464345, 3.951640903387954e-7, 0.09543919504412934)
             }
             dictionary Right = {
                 double3 position = (0, -5, 0)
@@ -29,6 +29,7 @@
             float3 "rtx:dynamicDiffuseGI:probeCounts" = (6, 6, 6)
             float3 "rtx:dynamicDiffuseGI:probeGridOrigin" = (-210, -250, -10)
             float3 "rtx:dynamicDiffuseGI:volumeSize" = (600, 440, 300)
+            int "rtx:externalFrameCounter" = 200782
             float3 "rtx:fog:fogColor" = (0.75, 0.75, 0.75)
             float3 "rtx:lightspeed:material:overrideAlbedo" = (0.5, 0.5, 0.5)
             float3 "rtx:lightspeed:material:overrideEmissiveColor" = (0.5, 0.5, 0.5)
@@ -83,11 +84,206 @@ def Xform "World"
             double3 xformOp:translate = (0, 0, 0.23961534089090586)
             uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
         }
+
+        over "base_link"
+        {
+            over "wheel_left_joint"
+            {
+                float state:angular:physics:position = 0
+                float state:angular:physics:velocity = 0
+            }
+
+            over "wheel_right_joint"
+            {
+                float state:angular:physics:position = 0
+                float state:angular:physics:velocity = 0
+            }
+        }
+
+        over "base_footprint"
+        {
+        }
+
+        over "caster_back_link"
+        {
+        }
+
+        over "imu_link"
+        {
+        }
+
+        over "base_scan"
+        {
+        }
+
+        over "wheel_left_link"
+        {
+        }
+
+        over "wheel_right_link"
+        {
+        }
+    }
+
+    def OmniGraph "Camera"
+    {
+        token evaluationMode = "Automatic"
+        token evaluator:type = "execution"
+        token fabricCacheBacking = "Shared"
+        int2 fileFormatVersion = (1, 5)
+        token pipelineStage = "pipelineStageSimulation"
+
+        def OmniGraphNode "on_playback_tick" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            token node:type = "omni.graph.action.OnPlaybackTick"
+            int node:typeVersion = 1
+            custom double outputs:deltaSeconds
+            custom double outputs:frame
+            custom uint outputs:tick (
+                customData = {
+                    bool isExecution = 1
+                }
+            )
+            custom double outputs:time
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (-197.32726, 111.474556)
+        }
+
+        def OmniGraphNode "isaac_create_viewport" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom uint inputs:execIn
+            prepend uint inputs:execIn.connect = </World/Camera/on_playback_tick.outputs:tick>
+            custom token inputs:name = "new_viewport"
+            custom uint inputs:viewportId = 0
+            token node:type = "omni.isaac.core_nodes.IsaacCreateViewport"
+            int node:typeVersion = 2
+            custom uint outputs:execOut (
+                customData = {
+                    bool isExecution = 1
+                }
+            )
+            custom token outputs:viewport
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (14.261074, 107.74906)
+        }
+
+        def OmniGraphNode "isaac_get_viewport_render_product" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom uint inputs:execIn
+            prepend uint inputs:execIn.connect = </World/Camera/isaac_create_viewport.outputs:execOut>
+            custom token inputs:viewport = ""
+            prepend token inputs:viewport.connect = </World/Camera/isaac_create_viewport.outputs:viewport>
+            token node:type = "omni.isaac.core_nodes.IsaacGetViewportRenderProduct"
+            int node:typeVersion = 1
+            custom uint outputs:execOut (
+                customData = {
+                    bool isExecution = 1
+                }
+            )
+            custom token outputs:renderProductPath
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (249.82547, 119.11553)
+        }
+
+        def OmniGraphNode "isaac_set_camera" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom rel inputs:cameraPrim
+            prepend rel inputs:cameraPrim = </World/turtlebot3_burger/Camera>
+            custom uint inputs:execIn
+            prepend uint inputs:execIn.connect = </World/Camera/isaac_get_viewport_render_product.outputs:execOut>
+            custom token inputs:renderProductPath = ""
+            prepend token inputs:renderProductPath.connect = </World/Camera/isaac_get_viewport_render_product.outputs:renderProductPath>
+            token node:type = "omni.isaac.core_nodes.IsaacSetCameraOnRenderProduct"
+            int node:typeVersion = 1
+            custom uint outputs:execOut (
+                customData = {
+                    bool isExecution = 1
+                }
+            )
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (552.43695, 75.18291)
+        }
+
+        def OmniGraphNode "ros2_camera_helper" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom uint64 inputs:context = 0
+            custom bool inputs:enableSemanticLabels = 0
+            custom uint inputs:execIn
+            prepend uint inputs:execIn.connect = </World/Camera/isaac_set_camera.outputs:execOut>
+            custom string inputs:frameId = "burger"
+            custom string inputs:nodeNamespace = ""
+            custom uint64 inputs:queueSize = 10
+            custom token inputs:renderProductPath = ""
+            prepend token inputs:renderProductPath.connect = </World/Camera/isaac_get_viewport_render_product.outputs:renderProductPath>
+            custom string inputs:semanticLabelsTopicName = "semantic_labels"
+            custom float2 inputs:stereoOffset = (0, 0)
+            custom string inputs:topicName = "rgb"
+            custom token inputs:type = "rgb" (
+                allowedTokens = ["rgb", "depth", "depth_pcl", "instance_segmentation", "semantic_segmentation", "bbox_2d_tight", "bbox_2d_loose", "bbox_3d", "camera_info"]
+            )
+            custom token inputs:viewport = ""
+            token node:type = "omni.isaac.ros2_bridge.ROS2CameraHelper"
+            int node:typeVersion = 2
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (781.3685, 96.066574)
+        }
+    }
+
+    def Xform "PaintTool"
+    {
+        def Xform "Grass_Short_A_26bdf"
+        {
+            def PointInstancer "pointInstancer"
+            {
+                quath[] orientations = []
+                point3f[] positions = []
+                int[] protoIndices = []
+                prepend rel prototypes = </World/PaintTool/Grass_Short_A_26bdf/pointInstancer/asset>
+                float3[] scales = []
+
+                def Xform "asset" (
+                    kind = "component"
+                    prepend references = @https://omniverse-content-production.s3.us-west-2.amazonaws.com/Assets/Vegetation/Shrub/Grass_Short_A.usd@
+                )
+                {
+                }
+            }
+        }
+
+        def Xform "Grass_Short_B_f6e14"
+        {
+            def PointInstancer "pointInstancer"
+            {
+                quath[] orientations = []
+                point3f[] positions = []
+                int[] protoIndices = []
+                prepend rel prototypes = </World/PaintTool/Grass_Short_B_f6e14/pointInstancer/asset>
+                float3[] scales = []
+
+                def Xform "asset" (
+                    kind = "component"
+                    prepend references = @https://omniverse-content-production.s3.us-west-2.amazonaws.com/Assets/Vegetation/Shrub/Grass_Short_B.usd@
+                )
+                {
+                }
+            }
+        }
     }
 }
 
 def Xform "Environment"
 {
+    token visibility = "inherited"
     quatd xformOp:orient = (1, 0, 0, 0)
     double3 xformOp:scale = (1, 1, 1)
     double3 xformOp:translate = (0, 0, 0)
@@ -115,7 +311,7 @@ def Xform "Environment"
         prepend payload = @omniverse://localhost/NVIDIA/Assets/Isaac/2022.2.1/Isaac/Environments/Hospital/hospital.usd@
     )
     {
-        token visibility = "invisible"
+        token visibility = "inherited"
     }
 }
 
