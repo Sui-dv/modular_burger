@@ -7,8 +7,8 @@
                 double radius = 5
             }
             dictionary Perspective = {
-                double3 position = (-1.2687694575540627, 3.0725793983759826, 1.3469660971686968)
-                double3 target = (-0.032000046417464345, 3.951640903387954e-7, 0.09543919504412934)
+                double3 position = (-3.7512211569338967, -3.723607707029657, 2.2003001206090493)
+                double3 target = (-0.03199955317910996, 8.809307239232567e-7, 0.09543914937555487)
             }
             dictionary Right = {
                 double3 position = (0, -5, 0)
@@ -29,7 +29,7 @@
             float3 "rtx:dynamicDiffuseGI:probeCounts" = (6, 6, 6)
             float3 "rtx:dynamicDiffuseGI:probeGridOrigin" = (-210, -250, -10)
             float3 "rtx:dynamicDiffuseGI:volumeSize" = (600, 440, 300)
-            int "rtx:externalFrameCounter" = 200782
+            int "rtx:externalFrameCounter" = 21901
             float3 "rtx:fog:fogColor" = (0.75, 0.75, 0.75)
             float3 "rtx:lightspeed:material:overrideAlbedo" = (0.5, 0.5, 0.5)
             float3 "rtx:lightspeed:material:overrideEmissiveColor" = (0.5, 0.5, 0.5)
@@ -70,61 +70,6 @@
 
 def Xform "World"
 {
-    def "turtlebot3_burger" (
-        instanceable = false
-        prepend payload = @file:/home/firstka/ros2_workspace/turtlebot3/turtlebot3_description/urdf/turtlebot3_burger/turtlebot3_burger.usd@
-    )
-    {
-        def Camera "Camera"
-        {
-            float focalLength = 24
-            float focusDistance = 400
-            quatd xformOp:orient = (0.5, 0.5, 0.5, 0.5)
-            double3 xformOp:scale = (1, 1, 1)
-            double3 xformOp:translate = (0, 0, 0.23961534089090586)
-            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
-        }
-
-        over "base_link"
-        {
-            over "wheel_left_joint"
-            {
-                float state:angular:physics:position = 0
-                float state:angular:physics:velocity = 0
-            }
-
-            over "wheel_right_joint"
-            {
-                float state:angular:physics:position = 0
-                float state:angular:physics:velocity = 0
-            }
-        }
-
-        over "base_footprint"
-        {
-        }
-
-        over "caster_back_link"
-        {
-        }
-
-        over "imu_link"
-        {
-        }
-
-        over "base_scan"
-        {
-        }
-
-        over "wheel_left_link"
-        {
-        }
-
-        over "wheel_right_link"
-        {
-        }
-    }
-
     def OmniGraph "Camera"
     {
         token evaluationMode = "Automatic"
@@ -196,7 +141,7 @@ def Xform "World"
         )
         {
             custom rel inputs:cameraPrim
-            prepend rel inputs:cameraPrim = </World/turtlebot3_burger/Camera>
+            prepend rel inputs:cameraPrim = </World/turtlebot3_burger/base_scan/Camera>
             custom uint inputs:execIn
             prepend uint inputs:execIn.connect = </World/Camera/isaac_get_viewport_render_product.outputs:execOut>
             custom token inputs:renderProductPath = ""
@@ -279,6 +224,65 @@ def Xform "World"
             }
         }
     }
+
+    def "turtlebot3_burger" (
+        instanceable = false
+        prepend payload = @file:/home/firstka/ros2_workspace/turtlebot3/turtlebot3_description/urdf/turtlebot3_burger/turtlebot3_burger.usd@
+    )
+    {
+        quatd xformOp:orient = (1, 0, 0, 0)
+        double3 xformOp:scale = (1, 1, 1)
+        double3 xformOp:translate = (0, 0, 0.1528506414486046)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+
+        over "base_link"
+        {
+            over "wheel_left_joint"
+            {
+                float state:angular:physics:position = 0
+                float state:angular:physics:velocity = 0
+            }
+
+            over "wheel_right_joint"
+            {
+                float state:angular:physics:position = 0
+                float state:angular:physics:velocity = 0
+            }
+        }
+
+        over "base_footprint"
+        {
+        }
+
+        over "caster_back_link"
+        {
+        }
+
+        over "imu_link"
+        {
+        }
+
+        over "base_scan"
+        {
+            def Camera "Camera"
+            {
+                float focalLength = 24
+                float focusDistance = 400
+                quatd xformOp:orient = (0.4999999999999997, 0.5000000000000001, 0.5000000000000001, 0.5000000000000001)
+                double3 xformOp:scale = (1, 1, 1)
+                double3 xformOp:translate = (0.14948948812213017, 0, 0.0996927776520593)
+                uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
+            }
+        }
+
+        over "wheel_left_link"
+        {
+        }
+
+        over "wheel_right_link"
+        {
+        }
+    }
 }
 
 def Xform "Environment"
@@ -306,12 +310,15 @@ def Xform "Environment"
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient", "xformOp:scale"]
     }
 
-    def "hospital" (
+    def "warehouse" (
         instanceable = false
-        prepend payload = @omniverse://localhost/NVIDIA/Assets/Isaac/2022.2.1/Isaac/Environments/Hospital/hospital.usd@
+        prepend payload = @omniverse://localhost/NVIDIA/Assets/Isaac/2022.2.1/Isaac/Environments/Simple_Warehouse/warehouse.usd@
     )
     {
-        token visibility = "inherited"
+        float3 xformOp:rotateZYX = (0, 0, 0)
+        float3 xformOp:scale = (1, 1, 1)
+        double3 xformOp:translate = (0, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:rotateZYX", "xformOp:scale"]
     }
 }
 
