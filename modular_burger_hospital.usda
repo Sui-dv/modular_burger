@@ -8,7 +8,7 @@
             }
             dictionary Perspective = {
                 double3 position = (-3.7512211569338967, -3.723607707029657, 2.2003001206090493)
-                double3 target = (-0.03199955317910996, 8.809307239232567e-7, 0.09543914937555487)
+                double3 target = (-0.031999553179111295, 8.809307239232567e-7, 0.09543914937555531)
             }
             dictionary Right = {
                 double3 position = (0, -5, 0)
@@ -18,7 +18,7 @@
                 double3 position = (0, 0, 5)
                 double radius = 5
             }
-            string boundCamera = "/OmniverseKit_Persp"
+            string boundCamera = "/World/turtlebot3_burger/base_scan/Camera"
         }
         dictionary omni_layer = {
             dictionary muteness = {
@@ -29,7 +29,7 @@
             float3 "rtx:dynamicDiffuseGI:probeCounts" = (6, 6, 6)
             float3 "rtx:dynamicDiffuseGI:probeGridOrigin" = (-210, -250, -10)
             float3 "rtx:dynamicDiffuseGI:volumeSize" = (600, 440, 300)
-            int "rtx:externalFrameCounter" = 21901
+            int "rtx:externalFrameCounter" = 24218
             float3 "rtx:fog:fogColor" = (0.75, 0.75, 0.75)
             float3 "rtx:lightspeed:material:overrideAlbedo" = (0.5, 0.5, 0.5)
             float3 "rtx:lightspeed:material:overrideEmissiveColor" = (0.5, 0.5, 0.5)
@@ -281,6 +281,218 @@ def Xform "World"
 
         over "wheel_right_link"
         {
+        }
+
+        over "Looks"
+        {
+            token visibility = "inherited"
+        }
+    }
+
+    def OmniGraph "Driver"
+    {
+        token evaluationMode = "Automatic"
+        token evaluator:type = "execution"
+        token fabricCacheBacking = "Shared"
+        int2 fileFormatVersion = (1, 5)
+        token pipelineStage = "pipelineStageSimulation"
+
+        def OmniGraphNode "on_playback_tick" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            token node:type = "omni.graph.action.OnPlaybackTick"
+            int node:typeVersion = 1
+            custom double outputs:deltaSeconds
+            custom double outputs:frame
+            custom uint outputs:tick (
+                customData = {
+                    bool isExecution = 1
+                }
+            )
+            custom double outputs:time
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (-269.10544, 95.02374)
+        }
+
+        def OmniGraphNode "ros2_context" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom uchar inputs:domain_id = 0
+            custom bool inputs:useDomainIDEnvVar = 0
+            token node:type = "omni.isaac.ros2_bridge.ROS2Context"
+            int node:typeVersion = 2
+            custom uint64 outputs:context = 0
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (-337.21094, 365.09814)
+        }
+
+        def OmniGraphNode "ros2_subscribe_twist" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom uint64 inputs:context = 0
+            prepend uint64 inputs:context.connect = </World/Driver/ros2_context.outputs:context>
+            custom uint inputs:execIn
+            prepend uint inputs:execIn.connect = </World/Driver/on_playback_tick.outputs:tick>
+            custom string inputs:nodeNamespace = ""
+            custom uint64 inputs:queueSize = 10
+            custom string inputs:topicName = "cmd_vel"
+            token node:type = "omni.isaac.ros2_bridge.ROS2SubscribeTwist"
+            int node:typeVersion = 1
+            custom vector3d outputs:angularVelocity = (0, 0, 0)
+            custom uint outputs:execOut (
+                customData = {
+                    bool isExecution = 1
+                }
+            )
+            custom vector3d outputs:linearVelocity = (0, 0, 0)
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (-18.669033, 280.46082)
+        }
+
+        def OmniGraphNode "scale_to_from_stage_units" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom token inputs:conversion = "Convert to stage units" (
+                allowedTokens = ["Convert to stage units", "Convert to meters"]
+            )
+            custom token inputs:value
+            prepend token inputs:value.connect = </World/Driver/ros2_subscribe_twist.outputs:linearVelocity>
+            token node:type = "omni.isaac.core_nodes.OgnIsaacScaleToFromStageUnit"
+            int node:typeVersion = 1
+            custom token outputs:result
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (87.831436, 575.1444)
+        }
+
+        def OmniGraphNode "break_3_vector" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom token inputs:tuple
+            prepend token inputs:tuple.connect = </World/Driver/ros2_subscribe_twist.outputs:angularVelocity>
+            token node:type = "omni.graph.nodes.BreakVector3"
+            int node:typeVersion = 1
+            custom token outputs:x
+            custom token outputs:y
+            custom token outputs:z
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (353.88422, 411.99548)
+        }
+
+        def OmniGraphNode "differential_controller" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom double inputs:angularVelocity = 0
+            prepend double inputs:angularVelocity.connect = </World/Driver/break_3_vector.outputs:z>
+            custom uint inputs:execIn
+            prepend uint inputs:execIn.connect = </World/Driver/ros2_subscribe_twist.outputs:execOut>
+            custom double inputs:linearVelocity = 0
+            prepend double inputs:linearVelocity.connect = </World/Driver/break_3_vector_01.outputs:x>
+            custom double inputs:maxAngularSpeed = 2.84
+            custom double inputs:maxLinearSpeed = 0.22
+            custom double inputs:maxWheelSpeed = 0
+            custom double inputs:wheelDistance = 0.16
+            custom double inputs:wheelRadius = 0.033
+            token node:type = "omni.isaac.wheeled_robots.DifferentialController"
+            int node:typeVersion = 1
+            custom double[] outputs:effortCommand
+            custom double[] outputs:positionCommand
+            custom double[] outputs:velocityCommand
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (577.2907, 400.55063)
+        }
+
+        def OmniGraphNode "articulation_controller" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom double[] inputs:effortCommand = []
+            custom uint inputs:execIn
+            prepend uint inputs:execIn.connect = </World/Driver/on_playback_tick.outputs:tick>
+            custom int[] inputs:jointIndices = []
+            custom token[] inputs:jointNames = []
+            prepend token[] inputs:jointNames.connect = </World/Driver/make_array.outputs:array>
+            custom double[] inputs:positionCommand = []
+            custom string inputs:robotPath = ""
+            custom rel inputs:targetPrim
+            prepend rel inputs:targetPrim = </World/turtlebot3_burger>
+            custom bool inputs:usePath = 1
+            custom double[] inputs:velocityCommand = []
+            prepend double[] inputs:velocityCommand.connect = </World/Driver/differential_controller.outputs:velocityCommand>
+            token node:type = "omni.isaac.core_nodes.IsaacArticulationController"
+            int node:typeVersion = 1
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (883.6891, 181.24336)
+        }
+
+        def OmniGraphNode "constant_token" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom token inputs:value = "wheel_right_joint"
+            token node:type = "omni.graph.nodes.ConstantToken"
+            int node:typeVersion = 1
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (366.9697, 86.27035)
+        }
+
+        def OmniGraphNode "make_array" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom int inputs:arraySize = 2
+            custom token inputs:arrayType = "token[]" (
+                allowedTokens = ["auto", "bool[]", "double[]", "float[]", "half[]", "int[]", "int64[]", "token[]", "uchar[]", "uint[]", "uint64[]", "double[2][]", "double[3][]", "double[4][]", "matrixd[3][]", "matrixd[4][]", "float[2][]", "float[3][]", "float[4][]", "half[2][]", "half[3][]", "half[4][]", "int[2][]", "int[3][]", "int[4][]"]
+            )
+            custom token inputs:input0
+            prepend token inputs:input0.connect = </World/Driver/constant_token_01.inputs:value>
+            custom token inputs:input1 (
+                customData = {
+                    string ExtendedAttributeType = "Any"
+                    dictionary omni = {
+                        dictionary graph = {
+                            string attrType = "Any"
+                        }
+                    }
+                }
+            )
+            prepend token inputs:input1.connect = </World/Driver/constant_token.inputs:value>
+            token node:type = "omni.graph.nodes.ConstructArray"
+            int node:typeVersion = 1
+            custom token outputs:array
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (598.15704, 76.009705)
+        }
+
+        def OmniGraphNode "constant_token_01" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom token inputs:value = "wheel_left_joint"
+            token node:type = "omni.graph.nodes.ConstantToken"
+            int node:typeVersion = 1
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (363.07822, -30.117355)
+        }
+
+        def OmniGraphNode "break_3_vector_01" (
+            prepend apiSchemas = ["NodeGraphNodeAPI"]
+        )
+        {
+            custom token inputs:tuple
+            prepend token inputs:tuple.connect = </World/Driver/scale_to_from_stage_units.outputs:result>
+            token node:type = "omni.graph.nodes.BreakVector3"
+            int node:typeVersion = 1
+            custom token outputs:x
+            custom token outputs:y
+            custom token outputs:z
+            uniform token ui:nodegraph:node:expansionState = "open"
+            uniform float2 ui:nodegraph:node:pos = (357.5257, 594.85754)
         }
     }
 }
